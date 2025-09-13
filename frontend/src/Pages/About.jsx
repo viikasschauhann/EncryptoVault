@@ -112,7 +112,7 @@ const About = () => {
               <span className="text-lg">Start Encrypting</span>
             </button>
             <a
-              href="https://github.com"
+              href="https://github.com/viikasschauhann/EncryptoVault"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-primary bg-gray-700 hover:bg-gray-600 focus:ring-gray-500 flex items-center justify-center space-x-3 py-4 px-8"
@@ -237,7 +237,7 @@ const About = () => {
               <span className="text-lg">Back to App</span>
             </button>
             <a
-              href="https://github.com"
+              href="https://github.com/viikasschauhann/EncryptoVault"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-primary bg-gray-700 hover:bg-gray-600 focus:ring-gray-500 flex items-center justify-center space-x-3 py-4 px-8"
