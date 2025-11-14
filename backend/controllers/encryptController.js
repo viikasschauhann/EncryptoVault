@@ -1,7 +1,7 @@
 import { encryptData, decryptData } from "../utils/encryption.js";
 import fs from "fs";
 
-export const encryptFile = (req, res) => {
+export const encryptFile = async (req, res) => {
   try {
     const password = req.body.password;
     const fileData = fs.readFileSync(req.file.path);
