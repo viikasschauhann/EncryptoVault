@@ -10,6 +10,11 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.get("/", (req, res) => {
+    res.send("File Encryption/Decryption API is running");
+})
 
 // API routes
 app.use("/api/files", fileRoutes);

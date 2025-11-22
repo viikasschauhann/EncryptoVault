@@ -1,51 +1,52 @@
-import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router';
-import { 
-  Upload, 
-  Lock, 
-  Download, 
-  AlertCircle, 
-  CheckCircle, 
-  Info, 
+import React, { useState, useRef } from "react";
+import { useNavigate } from "react-router";
+import {
+  Upload,
+  Lock,
+  Download,
+  AlertCircle,
+  CheckCircle,
+  Info,
   X,
   Loader2,
   FileText,
   Eye,
-  EyeOff
-} from 'lucide-react';
-import ParticleBackground from './ParticleBackground';
-import FloatingLock from './FloatingLock';
+  EyeOff,
+} from "lucide-react";
+import ParticleBackground from "./ParticleBackground";
+import FloatingLock from "./FloatingLock";
 
 const EncryptedFileVault = () => {
   const navigate = useNavigate();
-  
+
   // State management
   const [selectedFile, setSelectedFile] = useState(null);
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
   const [processedFile, setProcessedFile] = useState(null);
-  
+
   const fileInputRef = useRef(null);
 
   // File handling functions
   const handleFileSelect = (file) => {
-    if (file && file.type !== '') {
-      setSelectedFile(file);
-      setShowError(false);
-    }
-  };
+  if (file && file.name) {   // allow .enc files
+    setSelectedFile(file);
+    setShowError(false);
+  }
+};
+
 
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
+    if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
-    } else if (e.type === 'dragleave') {
+    } else if (e.type === "dragleave") {
       setDragActive(false);
     }
   };
@@ -54,7 +55,7 @@ const EncryptedFileVault = () => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileSelect(e.dataTransfer.files[0]);
     }
@@ -67,77 +68,133 @@ const EncryptedFileVault = () => {
   };
 
   // Placeholder encryption/decryption functions
-  const handleEncrypt = async (file, password) => {
-    setIsLoading(true);
-    try {
-      // Simulate encryption process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Create a mock encrypted file
-      const encryptedBlob = new Blob([file], { type: 'application/octet-stream' });
-      const encryptedFile = new File([encryptedBlob], `encrypted_${file.name}`, {
-        type: 'application/octet-stream'
-      });
-      
-      setProcessedFile(encryptedFile);
-      setShowSuccess(true);
-    } catch (error) {
-      setErrorMessage('Encryption failed. Please try again.');
-      setShowError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  async function handleEncrypt() {
+    const fileInput = selectedFile;
+    const passwordInput = password;
 
-  const handleDecrypt = async (file, password) => {
-    setIsLoading(true);
+    if (!fileInput) {
+      alert("Please select a file");
+      return;
+    }
+
+    if (!passwordInput) {
+      alert("Please enter a password");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", fileInput);
+    formData.append("password", passwordInput);
+
     try {
-      // Simulate decryption process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simulate password validation
-      if (password.length < 4) {
-        throw new Error('Invalid password. Please try again.');
+      const response = await fetch("http://localhost:5000/api/files/encrypt", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert("Error: " + error.error);
+        return;
       }
-      
-      // Create a mock decrypted file
-      const decryptedBlob = new Blob([file], { type: 'text/plain' });
-      const decryptedFile = new File([decryptedBlob], `decrypted_${file.name}`, {
-        type: 'text/plain'
-      });
-      
-      setProcessedFile(decryptedFile);
-      setShowSuccess(true);
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      // generate encrypted file name
+      const encryptedName = fileInput.name + ".enc";
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = encryptedName;
+      a.click();
+
+      window.URL.revokeObjectURL(url);
+
+      alert("File encrypted successfully!");
     } catch (error) {
-      setErrorMessage(error.message || 'Decryption failed. Please check your password.');
-      setShowError(true);
-    } finally {
-      setIsLoading(false);
+      console.error("Encryption error:", error);
+      alert("Encryption failed: " + error.message);
     }
-  };
+  }
 
-  const handleEncryptClick = () => {
+  async function handleDecrypt() {
+    const fileInput = selectedFile;
+    const passwordInput = password;
+
+    if (!fileInput) {
+      alert("Please select an encrypted file (.enc)");
+      return;
+    }
+
+    if (!passwordInput) {
+      alert("Please enter a password");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", fileInput);
+    formData.append("password", passwordInput);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/files/decrypt", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert("Error: " + error.error);
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      // restore original file name by removing .enc
+      let originalName = fileInput.name.replace(/\.enc$/, "");
+
+      // fallback name if user uploads wrong filename
+      if (originalName === fileInput.name) {
+        originalName = "decrypted_file";
+      }
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = originalName;
+      a.click();
+
+      window.URL.revokeObjectURL(url);
+
+      alert("File decrypted successfully!");
+    } catch (error) {
+      console.error("Decryption error:", error);
+      alert("Decryption failed: " + error.message);
+    }
+  }
+
+  const handleEncryptClick = async () => {
     if (!selectedFile || !password) {
-      setErrorMessage('Please select a file and enter a password.');
+      setErrorMessage("Please select a file and enter a password.");
       setShowError(true);
       return;
     }
-    handleEncrypt(selectedFile, password);
+    await handleEncrypt(selectedFile, password);
   };
 
-  const handleDecryptClick = () => {
+  const handleDecryptClick = async () => {
     if (!selectedFile || !password) {
-      setErrorMessage('Please select a file and enter a password.');
+      setErrorMessage("Please select a file and enter a password.");
       setShowError(true);
       return;
     }
-    handleDecrypt(selectedFile, password);
+    await handleDecrypt(selectedFile, password);
   };
 
   const downloadFile = () => {
     if (processedFile) {
       const url = URL.createObjectURL(processedFile);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = processedFile.name;
       document.body.appendChild(a);
@@ -149,13 +206,13 @@ const EncryptedFileVault = () => {
 
   const resetForm = () => {
     setSelectedFile(null);
-    setPassword('');
+    setPassword("");
     setShowPassword(false);
     setShowSuccess(false);
     setShowError(false);
     setProcessedFile(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -168,10 +225,12 @@ const EncryptedFileVault = () => {
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center space-x-4">
               <FloatingLock size="medium" />
-              <h1 className="text-2xl font-bold text-white text-glow">EncryptoVault</h1>
+              <h1 className="text-2xl font-bold text-white text-glow">
+                EncryptoVault
+              </h1>
             </div>
             <button
-              onClick={() => navigate('/about')}
+              onClick={() => navigate("/about")}
               className="px-6 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-white transition-all duration-300 hover:scale-105 border border-gray-700 hover:border-emerald-500"
             >
               About
@@ -204,8 +263,8 @@ const EncryptedFileVault = () => {
             <div
               className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 ${
                 dragActive
-                  ? 'border-emerald-400 bg-emerald-500/10 scale-105'
-                  : 'border-gray-600 hover:border-emerald-500 hover:bg-gray-800/50'
+                  ? "border-emerald-400 bg-emerald-500/10 scale-105"
+                  : "border-gray-600 hover:border-emerald-500 hover:bg-gray-800/50"
               }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
@@ -215,15 +274,18 @@ const EncryptedFileVault = () => {
               <input
                 ref={fileInputRef}
                 type="file"
+                accept=".enc,.bin,*/*"
                 onChange={handleFileInputChange}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
-              
+
               {selectedFile ? (
                 <div className="flex items-center justify-center space-x-4">
                   <FileText className="h-10 w-10 text-emerald-400 float" />
                   <div className="text-left">
-                    <p className="font-medium text-white text-lg">{selectedFile.name}</p>
+                    <p className="font-medium text-white text-lg">
+                      {selectedFile.name}
+                    </p>
                     <p className="text-sm text-gray-400">
                       {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                     </p>
@@ -233,7 +295,7 @@ const EncryptedFileVault = () => {
                 <div>
                   <Upload className="h-16 w-16 text-gray-400 mx-auto mb-6 float" />
                   <p className="text-gray-300 mb-3 text-lg">
-                    Drag and drop your file here, or{' '}
+                    Drag and drop your file here, or{" "}
                     <span className="text-emerald-400 font-medium">browse</span>
                   </p>
                   <p className="text-sm text-gray-500">
@@ -287,7 +349,7 @@ const EncryptedFileVault = () => {
               )}
               <span className="text-lg">Encrypt File</span>
             </button>
-            
+
             <button
               onClick={handleDecryptClick}
               disabled={isLoading}
@@ -310,7 +372,10 @@ const EncryptedFileVault = () => {
                 <span className="text-lg">Processing your file...</span>
               </div>
               <div className="mt-4 w-full bg-gray-700 rounded-full h-3">
-                <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-3 rounded-full animate-pulse" style={{ width: '100%' }}></div>
+                <div
+                  className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-3 rounded-full animate-pulse"
+                  style={{ width: "100%" }}
+                ></div>
               </div>
             </div>
           )}
@@ -371,7 +436,6 @@ const EncryptedFileVault = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };
