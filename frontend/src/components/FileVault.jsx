@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router";
+
 import {
   Upload,
   Lock,
@@ -18,7 +19,7 @@ import FloatingLock from "./FloatingLock";
 
 const EncryptedFileVault = () => {
   const navigate = useNavigate();
-
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
   // State management
   const [selectedFile, setSelectedFile] = useState(null);
   const [password, setPassword] = useState("");
@@ -87,7 +88,7 @@ const EncryptedFileVault = () => {
     formData.append("password", passwordInput);
 
     try {
-      const response = await fetch("http://localhost:5000/api/files/encrypt", {
+      const response = await fetch(`${backendUrl}/api/files/encrypt`, {
         method: "POST",
         body: formData,
       });
@@ -137,7 +138,7 @@ const EncryptedFileVault = () => {
     formData.append("password", passwordInput);
 
     try {
-      const response = await fetch("http://localhost:5000/api/files/decrypt", {
+      const response = await fetch(`${backendUrl}/api/files/decrypt`, {
         method: "POST",
         body: formData,
       });
